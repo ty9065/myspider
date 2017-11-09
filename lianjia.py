@@ -3,14 +3,14 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
-import re, itertools, urlparse
+import re, itertools
 import lxml.html
 import csv, codecs
 
 from link_crawler import download, Throttle, get_robots
 
 
-def link_crawler(seed_url, link_regex=None, delay=0, max_depth=-1, max_urls=-1, user_agent='Sogou spider', scrape_callback=None):
+def page_crawler(seed_url, delay=0, max_depth=-1, max_urls=-1, user_agent='Sogou spider', scrape_callback=None):
 
     crawl_queue = [seed_url]
     seen = {seed_url: 0}
@@ -36,23 +36,30 @@ def link_crawler(seed_url, link_regex=None, delay=0, max_depth=-1, max_urls=-1, 
                         seen[link] = depth + 1
                         crawl_queue.append(link)
             num_urls += 1
-            if num_urls == max_urls:
+            if num_urls-1 == max_urls:
                 break
         else:
             print 'Blocked by robots.txt:', url
     print '抓取的链接数：' + str(num_urls-1)
+    return num_urls-1
 
-def get_pages(html):
-    tree = lxml.html.fromstring(html)
-    pages = []
-    for i in itertools.count(0):
-        try:
-            page = tree.cssselect('div.page-box.house-lst-page-box > a')[i].get('href')
-            pages.append(page)
-        except:
-            print 'error'
+def pages_crawler(seed_url, scrape_callback=None):
+    url_part = ['https://nj.lianjia.com/ershoufang/qilinzhen/pg', 'l2a2p4']
+    total_crawler = 0
+    total_num = get_totalnum(seed_url)
+
+    for i in itertools.count(1):
+        pages = str(i).join(url_part)
+        num = page_crawler(pages, scrape_callback=scrape_callback)
+        total_crawler += num
+        if total_crawler == total_num:
             break
-    return pages
+
+def get_totalnum(url):
+    html = download(url)
+    tree = lxml.html.fromstring(html)
+    totalnum = tree.cssselect('div.resultDes.clear > h2.total.fl > span')[0].text_content()
+    return int(totalnum)
 
 def get_links(html):
     tree = lxml.html.fromstring(html)
@@ -68,7 +75,7 @@ def get_links(html):
 
 class ScrapeCallback:
     def __init__(self, filename, fields):
-        file_obj = open(filename, 'a+')
+        file_obj = open(filename, 'wb')
         file_obj.write(codecs.BOM_UTF8)  # 防止乱码
         self.writer = csv.writer(file_obj)
         self.fields = fields
@@ -87,7 +94,7 @@ class ScrapeCallback:
 if __name__ == '__main__':
     filename = 'lianjia.csv'
     fields = ('url', 'total', 'unitPriceValue', 'room', 'type', 'area')
-    url = ['https://nj.lianjia.com/ershoufang/qilinzhen/pg', 'l2a2p4']
-    for i in range(1,7):
-        result = str(i).join(url)
-        link_crawler(result, scrape_callback=ScrapeCallback(filename, fields))
+    scrape_callback = ScrapeCallback(filename, fields)
+
+    url = 'https://nj.lianjia.com/ershoufang/qilinzhen/l2a2p4'
+    pages_crawler(url, scrape_callback)
