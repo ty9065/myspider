@@ -74,27 +74,38 @@ def get_links(html):
     return links
 
 class ScrapeCallback:
-    def __init__(self, filename, fields):
+    def __init__(self, filename, fields, title):
         file_obj = open(filename, 'wb')
         file_obj.write(codecs.BOM_UTF8)  # 防止乱码
         self.writer = csv.writer(file_obj)
         self.fields = fields
-        self.writer.writerow(self.fields)
+        self.title = title
+        self.writer.writerow(self.title)
 
     def call_lianjia(self, url, html):
         if re.search('[0-9]{12}', url):
             tree = lxml.html.fromstring(html)
             row = [url]
-            for field in self.fields[1:3]:
+            row.append(tree.cssselect('h1.main')[0].get('title'))
+
+            for field in self.fields[0]:
                 row.append(tree.cssselect('span.{}'.format(field))[0].text_content())
-            for field in self.fields[3:6]:
+
+            row.append(tree.cssselect('span.taxtext > span')[0].text_content())
+
+            for field in self.fields[1]:
                 row.append(tree.cssselect('div.{} > div.mainInfo'.format(field))[0].text_content())
+                row.append(tree.cssselect('div.{} > div.subInfo'.format(field))[0].text_content())
+
+            row.append(tree.cssselect('div.communityName > a.info')[0].text_content())
+            row.append(tree.cssselect('div.areaName > span.info')[0].text_content())
             self.writer.writerow(row)
 
 if __name__ == '__main__':
     filename = 'lianjia.csv'
-    fields = ('url', 'total', 'unitPriceValue', 'room', 'type', 'area')
-    scrape_callback = ScrapeCallback(filename, fields)
+    fields = (['total', 'unitPriceValue'], ['room', 'type', 'area'])
+    title = ('链接', '标题', '总价/万', '单价', '首付', '户型', '楼层', '朝向', '装修情况', '面积', '建筑类型', '小区名称', '所在区域')
+    scrape_callback = ScrapeCallback(filename, fields, title)
 
     url = 'https://nj.lianjia.com/ershoufang/qilinzhen/l2a2p4'
     pages_crawler(url, scrape_callback)
