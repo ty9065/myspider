@@ -99,6 +99,14 @@ class ScrapeCallback:
 
             row.append(tree.cssselect('div.communityName > a.info')[0].text_content())
             row.append(tree.cssselect('div.areaName > span.info')[0].text_content())
+
+            # 有规律的数据还可以这样抓
+            # for i in itertools.count(0):
+            #     try:
+            #         row.append(tree.cssselect('div.base > div.content > ul > li')[i].text_content())
+            #     except:
+            #         break
+
             self.writer.writerow(row)
 
 if __name__ == '__main__':
@@ -108,4 +116,5 @@ if __name__ == '__main__':
     scrape_callback = ScrapeCallback(filename, fields, title)
 
     url = 'https://nj.lianjia.com/ershoufang/qilinzhen/l2a2p4'
-    pages_crawler(url, scrape_callback)
+    pages_crawler(url, scrape_callback=scrape_callback)     #抓多页
+    page_crawler(url, scrape_callback=scrape_callback)      #抓单页
