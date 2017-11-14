@@ -155,6 +155,14 @@ class MongoCache:
         self.db = client.cache
         self.db.webpage.create_index('timestamp', expireAfterSeconds=expires.total_seconds())   # 创建timestamp索引，到期MongoDB自动删除
 
+    def __contains__(self, url):
+        try:
+            self[url]
+        except KeyError:
+            return False
+        else:
+            return True
+
     def __getitem__(self, url):
         record = self.db.webpage.find_one({'_id': url})                                         # 取出record
         if record:
