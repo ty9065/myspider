@@ -1,29 +1,8 @@
 # -*- coding: UTF-8 -*-
-import urllib2, re, urlparse, robotparser
-import datetime, time
+import re, urlparse, robotparser
 import lxml.html
 import csv
-from classes import Downloader, DiskCache
-
-def download(url, user_agent='Sogou spider', proxy=None, num_retries=2):
-    print 'Downloading:', url
-    headers = {'User_agent': user_agent}
-    request = urllib2.Request(url, headers=headers)
-
-    opener = urllib2.build_opener()
-    if proxy:
-        proxy_params = {urlparse.urlparse(url).scheme: proxy}
-        opener.add_handler(urllib2.ProxyHandler(proxy_params))
-
-    try:
-        html = opener.open(request).read()
-    except urllib2.URLError as e:
-        print 'Download error:', e.reason
-        html = None
-        if num_retries > 0:
-            if hasattr(e, 'code') and 500 <= e.code < 600:
-                return download(url, user_agent, proxy, num_retries-1)
-    return html
+from classes import Downloader, DiskCache, MongoCache
 
 def link_crawler(seed_url, link_regex=None, delay=0, max_depth=1, max_urls=-1, user_agent = 'Sogou spider',\
                  proxies=None, num_retries=2, scrape_callback=None, cache=None):
@@ -89,6 +68,8 @@ class ScrapeCallback:
 
 if __name__ == '__main__':
     # download('http://httpstat.us/500')
-    link_crawler('http://example.webscraping.com', '/(places/default/index|places/default/view)', cache=DiskCache())
-
+    url = 'http://example.webscraping.com'
+    link_regex = '/(places/default/index|places/default/view)'
+    # link_crawler(url, link_regex=link_regex, scrape_callback=ScrapeCallback(), cache=DiskCache())
+    link_crawler(url, link_regex=link_regex, scrape_callback=ScrapeCallback(), cache=MongoCache())
 

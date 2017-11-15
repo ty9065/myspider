@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-import urllib2, re, urlparse, robotparser
+import urllib2, re, urlparse
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 from bson.binary import Binary
@@ -17,7 +17,7 @@ DEFAULT_AGENT = 'Sogou spider'
 DEFAULT_DELAY = 0
 DEFAULT_RETRIES = 2
 
-
+# 下载：获取url的html
 class Downloader:
     def __init__(self, delay=DEFAULT_DELAY, user_agent=DEFAULT_AGENT, proxies=None, num_retries=DEFAULT_RETRIES, opener=None, cache=None):
         self.throttle = Throttle(delay)
@@ -71,6 +71,7 @@ class Downloader:
         return {'html': html, 'code': code}
 
 
+# 爬取同一域名下的不同网页时，要延时，特别是在多线程爬虫中
 class Throttle:
     def __init__(self, delay):
         self.delay = delay
@@ -87,6 +88,7 @@ class Throttle:
         self.domains[domain] = datetime.now()
 
 
+# 磁盘缓存：缓存html
 class DiskCache:
     def __init__(self, cache_dir='cache', expires=timedelta(days=30), compress=True):
         self.cache_dir = cache_dir
@@ -149,10 +151,11 @@ class DiskCache:
             shutil.rmtree(self.cache_dir)
 
 
+# 数据库缓存——MongoDB
 class MongoCache:
     def __init__(self, client=None, expires=timedelta(days=30)):
         self.client = MongoClient('localhost', 27017) if client is None else client
-        self.db = client.cache
+        self.db = self.client.cache
         self.db.webpage.create_index('timestamp', expireAfterSeconds=expires.total_seconds())   # 创建timestamp索引，到期MongoDB自动删除
 
     def __contains__(self, url):
@@ -164,7 +167,7 @@ class MongoCache:
             return True
 
     def __getitem__(self, url):
-        record = self.db.webpage.find_one({'_id': url})                                         # 取出record
+        record = self.db.webpage.find_one({'_id': url})                                         # 取出record ———— find_one()：找出符合条件的第一条记录
         if record:
             result = record['result']
             return pickle.loads(zlib.decompress(result))
@@ -172,6 +175,9 @@ class MongoCache:
             raise KeyError(url + ' does not exist')
 
     def __setitem__(self, url, result):
-        result = Binary(zlib.compress(pickle.dumps(result)))
+        result = Binary(zlib.compress(pickle.dumps(result)))                                    # 注意这里将压缩后的字符串使用了Binary()
         record = {'result': result, 'timestamp': datetime.utcnow()}
-        self.db.webpage.update({'_id': url}, {'$set': record}, upsert=True)                     # 插入或更新record
+        self.db.webpage.update({'_id': url}, {'$set': record}, upsert=True)                     # 插入或更新record ———— update()
+
+    def clear(self):
+        self.db.webpage.drop()
