@@ -177,7 +177,7 @@ class MongoCache:
     def __setitem__(self, url, result):
         result = Binary(zlib.compress(pickle.dumps(result)))                                    # 注意这里将压缩后的字符串使用了Binary()
         record = {'result': result, 'timestamp': datetime.utcnow()}
-        self.db.webpage.update({'_id': url}, {'$set': record}, upsert=True)                     # 插入或更新record ———— update()
+        self.db.webpage.update({'_id': url}, {'$set': record}, upsert=True)                     # 插入或更新record ———— update()：无返回值
 
     def clear(self):
         self.db.webpage.drop()
