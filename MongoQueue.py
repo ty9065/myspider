@@ -6,7 +6,7 @@ class MongoQueue:
 
     OUTSTANDING, PROCESSING, COMPLETE = range(3)
 
-    def __init__(self, client=None, timeout=300):
+    def __init__(self, client=None, timeout=60):
         self.client = MongoClient() if client is None else client
         self.db = self.client.cache
         self.timeout = timeout
@@ -16,10 +16,7 @@ class MongoQueue:
         return True if record else False
 
     def push(self, url):
-        try:
-            self.db.crawl_queue.insert({'_id': url, 'status': self.OUTSTANDING})
-        except errors.DuplicateKeyError as e:
-            pass
+        self.db.crawl_queue.insert({'_id': url, 'status': self.OUTSTANDING, 'depth': 0})
 
     def pop(self):
         record = self.db.crawl_queue.find_and_modify(
@@ -38,6 +35,14 @@ class MongoQueue:
         record = self.db.crawl_queue.find_one({'status': self.OUTSTANDING})
         if record:
             return record['_id']
+
+    def get_depth(self, url):
+        record = self.db.crawl_queue.find_one({'_id': url})
+        return record['depth']
+
+    def update_depth(self, url):
+        self.db.crawl_queue.update({'_id': url},
+                                   {'$inc': {'depth': 1}})                  # '$inc'表示增减，1指定步长（正增负减）
 
     def complete(self, url):
         self.db.crawl_queue.update({'_id': url},
