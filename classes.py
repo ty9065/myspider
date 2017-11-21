@@ -153,10 +153,11 @@ class DiskCache:
 
 # 数据库缓存——MongoDB
 class MongoCache:
-    def __init__(self, client=None, expires=timedelta(days=30)):
-        self.client = MongoClient('localhost', 27017) if client is None else client
-        self.db = self.client.cache
-        self.db.webpage.create_index('timestamp', expireAfterSeconds=expires.total_seconds())   # 创建timestamp索引，到期MongoDB自动删除
+    def __init__(self, client=None, db_name='db_name', collect_name='collect_name', expires=timedelta(days=30)):
+        self.client = MongoClient('localhost', 27017) if client is None else client             # 创建数据库
+        self.db = self.client[db_name]                                                          # 定义数据库名db_name
+        self.collect = self.db[collect_name]                                                    # 定义集合名collect_name，或使用方法createCollection()
+        self.collect.create_index('timestamp', expireAfterSeconds=expires.total_seconds())      # 创建timestamp索引，到期MongoDB自动删除
 
     def __contains__(self, url):
         try:
@@ -167,7 +168,7 @@ class MongoCache:
             return True
 
     def __getitem__(self, url):
-        record = self.db.webpage.find_one({'_id': url})                                         # 取出record ———— find_one()：找出符合条件的第一条记录
+        record = self.collect.find_one({'_id': url})                                            # 取出record ———— find_one()：找出符合条件的第一条记录
         if record:
             result = record['result']
             return pickle.loads(zlib.decompress(result))
@@ -177,7 +178,7 @@ class MongoCache:
     def __setitem__(self, url, result):
         result = Binary(zlib.compress(pickle.dumps(result)))                                    # 注意这里将压缩后的字符串使用了Binary()
         record = {'result': result, 'timestamp': datetime.utcnow()}
-        self.db.webpage.update({'_id': url}, {'$set': record}, upsert=True)                     # 插入或更新record ———— update()：无返回值
+        self.collect.update({'_id': url}, {'$set': record}, upsert=True)                        # 插入或更新record ———— update()：无返回值
 
     def clear(self):
-        self.db.webpage.drop()
+        self.collect.drop()
