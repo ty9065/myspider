@@ -21,7 +21,7 @@ def login_cookies():
 
     html = opener.open(LOGIN_URL).read()
     data = parse_form(html)
-    pprint.pprint(data)
+    # pprint.pprint(data)
 
     data['email'] = LOGIN_EMAIL
     data['password'] = LOGIN_PASSWORD
@@ -30,6 +30,7 @@ def login_cookies():
     response = opener.open(request)
     # print response.info()             # 获取http服务器返回的响应头信息
     print response.geturl()             # 登录成功，跳转至主页
+    return opener
 
 def login_firefox():
     """手工登录，再复用cookie
