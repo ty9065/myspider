@@ -32,13 +32,12 @@ def login_cookies():
     print response.geturl()             # 登录成功，跳转至主页
     return opener
 
-def login_firefox():
+def login_firefox(url, csv_filename, basedomain):
     """手工登录，再复用cookie
     """
-    cj = load_cookies()
+    cj = load_cookies(csv_filename, basedomain)
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 
-    url = 'http://example.webscraping.com'
     html = opener.open(url).read()
     tree = lxml.html.fromstring(html)
     welcome = tree.cssselect('ul#navbar li a')[0].text_content()
@@ -67,12 +66,12 @@ def make_cookie(name, value):
                              rest=None
         )
 
-def load_cookies():
+def load_cookies(csv_filename, basedomain):
     """ 加载 cookie：cookies.sqlite -> cookies.csv -> make_cookie()     仅适用于firefox
     """
     cj = cookielib.CookieJar()
-    save_to_csv('export_data.csv')          # 将cookies.sqlite写入csv文件
-    cookies = csv.reader(open("export_data.csv", "rb"))     # 获取 cookies
+    save_to_csv(csv_filename, basedomain)                   # 将cookies.sqlite写入csv文件
+    cookies = csv.reader(open(csv_filename, 'rb'))          # 获取 cookies
     fields = sqlite_read()                                  # 获取 表列名
     for cookie in cookies:
         aa = dict(zip(fields, cookie))      # 两个列表组成字典
@@ -161,5 +160,8 @@ def parse_form(html):
 
 
 if __name__ == '__main__':
+    url = 'http://example.webscraping.com'
+    csv_filename = 'webscraping.csv'
+    basedomain = 'webscraping.com'
     # login_cookies()
-    login_firefox()
+    login_firefox(url, csv_filename, basedomain)

@@ -33,14 +33,16 @@ class UnicodeWriter:
         for row in rows:
             self.writerow(row)
 
-def save_to_csv(csv_filename):
+def save_to_csv(csv_filename, basedomain):
     sqlite_filename = find_firefox_cookies()
     conn = sqlite3.connect(sqlite_filename)
     c = conn.cursor()
-    c.execute("SELECT * FROM moz_cookies WHERE baseDomain='webscraping.com';")
+    # c.execute("SELECT * FROM moz_cookies WHERE baseDomain={};".format(basedomain))    # format用法：对应"'webscraping.com'"
+    c.execute("SELECT * FROM moz_cookies WHERE baseDomain='%s';" % basedomain)          # '%s'  用法：对应'webscraping.com'
     writer = UnicodeWriter(open(csv_filename, 'wb'))
     writer.writerows(c)
 
 
 if __name__ == '__main__':
-    save_to_csv('export_data.csv')
+    # save_to_csv('webscraping.csv', "'webscraping.com'")     # sql语句，使用format时需要再加上双引号""
+    save_to_csv('webscraping.csv', 'webscraping.com')
