@@ -1,4 +1,7 @@
 # -*- coding: UTF-8 -*-
+"""
+该方法兼容 python2 和 python3
+"""
 import sqlite3
 import pprint
 import os, glob
@@ -13,7 +16,7 @@ def sqlite_read():
     # 获取表名
     cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
     Tables = cur.fetchall()                     # Tables 为元组列表
-    # print Tables
+    # print(Tables)
 
     tbl_name = Tables[0][0]                     # 获取第一个表名
 
@@ -37,7 +40,7 @@ def find_firefox_cookies():
         filename = os.path.join(path, 'cookies.sqlite')     # glob模块：返回指定路径中所有匹配的文件
         matches = glob.glob(os.path.expanduser(filename))   # expanduser把path中包含的"~"和"~user"转换成用户目录
         if matches:
-            print matches[0]
+            print(matches[0])
             return matches[0]
 
 
