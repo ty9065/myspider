@@ -1,4 +1,7 @@
 # -*- coding: UTF-8 -*-
+"""
+search1.py 兼容 python2 和 python3
+"""
 import json, csv
 from classes import Downloader
 
@@ -15,7 +18,7 @@ def main():
     for record in ajax['records']:
         writer.writerow([record['country']])        # [record['country']]：用[]括起来变字符串为列表，避免写入文件为单个字符
 
-    print ajax['num_pages']                         # 将page_size设为260后，num_pages=1，即所有链接都显示在一个页面
+    print(ajax['num_pages'])                        # 将page_size设为260后，num_pages=1，即所有链接都显示在一个页面
 
 if __name__ == '__main__':
     main()

@@ -1,5 +1,8 @@
 # -*- coding: UTF-8 -*-
-import urllib2, re, urlparse
+"""
+classes.py 兼容 python2 和 python3
+"""
+import re
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 from bson.binary import Binary
@@ -7,6 +10,13 @@ import time
 import random
 import os, shutil
 import zlib
+
+try:
+    from urllib2 import Request, build_opener, ProxyHandler             # python2 包名
+    from urlparse import urlparse, urlsplit
+except ImportError:
+    from urllib.request import Request, build_opener, ProxyHandler      # python3 包名
+    from urllib.parse import urlparse, urlsplit
 
 try:
     import cPickle as pickle        # cPickle是c语言写的，速度快
@@ -46,21 +56,21 @@ class Downloader:
         return result['html']
 
     def download(self, url, user_agent, proxy, num_retries, data=None):
-        print 'Downloading:', url
+        print('Downloading:', url)
         headers = {'User_agent': user_agent}
-        request = urllib2.Request(url, headers=headers)
+        request = Request(url, headers=headers)
 
-        opener = self.opener or urllib2.build_opener()
+        opener = self.opener or build_opener()
         if proxy:
-            proxy_params = {urlparse.urlparse(url).scheme: proxy}
-            opener.add_handler(urllib2.ProxyHandler(proxy_params))
+            proxy_params = {urlparse(url).scheme: proxy}
+            opener.add_handler(ProxyHandler(proxy_params))
 
         try:
             response = opener.open(request)
             html = response.read()
             code = response.code
         except Exception as e:
-            print 'Download error:', str(e)
+            print('Download error:', str(e))
             html = None
             if hasattr(e, 'code'):
                 code = e.code
@@ -78,7 +88,7 @@ class Throttle:
         self.domains = {}
 
     def wait(self, url):
-        domain = urlparse.urlparse(url).netloc
+        domain = urlparse(url).netloc                           # 获取网址域名
         last_accessed = self.domains.get(domain)
 
         if self.delay > 0 and last_accessed is not None:
@@ -130,7 +140,7 @@ class DiskCache:
             pass
 
     def url_to_path(self, url):
-        components = urlparse.urlsplit(url)
+        components = urlsplit(url)
         path = components.path
         if not path:
             path = '/index.html'
