@@ -1,11 +1,21 @@
 # -*- coding: UTF-8 -*-
-import urllib, urllib2
+"""
+该方法兼容 python2 和 python3
+"""
+import urllib
 import lxml.html
 import pprint
-import cookielib
 import csv
 from sqlite_read import sqlite_read
-from sqlite_to_cvs import save_to_csv
+
+try:
+    from cookielib import CookieJar, MozillaCookieJar, LWPCookieJar, Cookie         # python2 包名
+    from urllib2 import build_opener, HTTPCookieProcessor, Request
+    from sqlite_to_csv_2 import save_to_csv
+except ImportError:
+    from http.cookiejar import CookieJar, MozillaCookieJar, LWPCookieJar, Cookie    # python3 包名
+    from urllib.request import build_opener, HTTPCookieProcessor, Request
+    from sqlite_to_csv_3 import save_to_csv
 
 
 LOGIN_URL = 'http://example.webscraping.com/places/default/user/login'
@@ -16,8 +26,8 @@ LOGIN_PASSWORD = 'example'
 def login_cookies():
     """自动登录
     """
-    cj = cookielib.CookieJar()
-    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    cj = CookieJar()
+    opener = build_opener(HTTPCookieProcessor(cj))
 
     html = opener.open(LOGIN_URL).read()
     data = parse_form(html)
@@ -26,28 +36,28 @@ def login_cookies():
     data['email'] = LOGIN_EMAIL
     data['password'] = LOGIN_PASSWORD
     encoded_data = urllib.urlencode(data)
-    request = urllib2.Request(LOGIN_URL, encoded_data)
+    request = Request(LOGIN_URL, encoded_data)
     response = opener.open(request)
-    # print response.info()             # 获取http服务器返回的响应头信息
-    print response.geturl()             # 登录成功，跳转至主页
+    # print(response.info())             # 获取http服务器返回的响应头信息
+    print(response.geturl())             # 登录成功，跳转至主页
     return opener
 
 def login_firefox(url, csv_filename, basedomain):
     """手工登录，再复用cookie
     """
     cj = load_cookies(csv_filename, basedomain)
-    opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+    opener = build_opener(HTTPCookieProcessor(cj))
 
     html = opener.open(url).read()
     tree = lxml.html.fromstring(html)
     welcome = tree.cssselect('ul#navbar li a')[0].text_content()
-    print welcome                       # 登录成功，解析出问候语
+    print(welcome)                       # 登录成功，解析出问候语
 
 def make_cookie(name, value):
     """ 生成 cookie
         参考：https://docs.python.org/2/library/cookielib.html
     """
-    return cookielib.Cookie(
+    return Cookie(
                              version=0,
                              name=name,
                              value=value,
@@ -69,9 +79,9 @@ def make_cookie(name, value):
 def load_cookies(csv_filename, basedomain):
     """ 加载 cookie：cookies.sqlite -> cookies.csv -> make_cookie()     仅适用于firefox
     """
-    cj = cookielib.CookieJar()
+    cj = CookieJar()
     save_to_csv(csv_filename, basedomain)                   # 将cookies.sqlite写入csv文件
-    cookies = csv.reader(open(csv_filename, 'rb'))          # 获取 cookies
+    cookies = csv.reader(open(csv_filename, 'r'))           # 获取 cookies
     fields = sqlite_read()                                  # 获取 表列名
     for cookie in cookies:
         aa = dict(zip(fields, cookie))      # 两个列表组成字典
@@ -79,13 +89,13 @@ def load_cookies(csv_filename, basedomain):
         c = make_cookie(aa['name'], aa['value'])
         cj.set_cookie(c)                    # 循环设置多个cookie，cookie不会覆盖
     for index, cookie in enumerate(cj):     # 显示cookies
-        print '[', index, ']', cookie
+        print('[', index, ']', cookie)
     return cj
 
 def load_cookies2():
     """ 加载 cookie：变量 -> make_cookie()
     """
-    cj = cookielib.CookieJar()
+    cj = CookieJar()
     cookie1 = ['session_data_places', '"8bd6acbc1de59b1dfceb2099ae7c2b3a:JeRQM1TZ9lwn_7e9KS2LcAGQjUai1Y5TbtUsr1D-qUj_rleZ8zKEu9iUVL0V-r9_icFERBwtpsJE7eusjbh7G_M3Jlem9ojkSkOpjNBuv4qvPFUmtBtgECSfJr2aHDQPibmo1jZKgrVvjuMCYgbJeGoCVqsU8Ru3UIpHnGwrCubtNEvfFQB0dEickfTDUSlprWpH4Oq8YOmAimJ00nI3AJUqub5DfY0kZLVL6KFl7L-xn79HwEhzzE_dVbYi7lD_6ZUi-Q5ob6197UL8dp1zJnD6OQ37iriLG6uZ4wAliRgUt8xIb9ebg60o6viRmat2tkC9fJwbb2ghEoGResxA8-1p6h-Z26nFH_QPG00J7N27UA7B3tB1aIlgufn48Ng6b-2EAp37j01WR5z5S0QposiYl4aWLOGVZIhlLOgfRW2v3yv00aooW2jXhSjMGEeQ8TNyzWRQUPiNYEXqV-Hu52ZFB7y9jGqFRGgL0fQqzP7zb3c0out8omE54eNOUS9QoYK46GUt7Mgiql-jisc4sJPEdttuRTx2wsbJn8DJfV-_Y7A6Lwi8j9cRyqAYwtALD9sCeT7QM3D6yacgBhf9CMCmNTRIK-ZH34a85ZlcFgBUiUY778f268C3tqCxlozD-XMNgpRk7VC9UU5a0COjNZPwo_zgI759dx1IognjndUSrl9YU-WX02sY4PNYoR0AXIIV-cqfpBkQq6uM_UBhSEdNxCdlAk8rqZBoPRFuh98DpExdW3xuScE_BkeVB1WtT7VW_82rEoqxrYP5BLoISK4wck_D8fvQf6AjjzJLPtRKVZCpLrbl0Rq8IhWjlfrinAx6rlCGyIN5bEgKrnoxxqFI4DNg2eg84iVh4wTwqr72Gwe-OA9q6xLTgEIr2gfCrb3WqsMFQR8FWSjqCy_YyyBQzsBNGd_S5lZ8iruzzlR_5OkeHkTFX8qkfgJTNsXWwL-s9U3dCJITWqi35qRky7XJ4-a_qY5WnPtjh9nP1G7p9SLSrXzeJ7Pch4bi2T_xddzmo5nZGx8MxO-dmKY1rHG5SdGQNveHQQOYuod6YwWJTa_YcxObJ72itblRIFNB"']
     cookie2 = ['session_id_places', 'True']
     cookies = [cookie1, cookie2]            # 将cookies存入列表
@@ -96,26 +106,26 @@ def load_cookies2():
         c = make_cookie(aa['name'], aa['value'])
         cj.set_cookie(c)                    # 循环设置多个cookie，cookie不会覆盖
     for index, cookie in enumerate(cj):     # 显示cookies
-        print '[', index, ']', cookie
+        print('[', index, ']', cookie)
     return cj
 
 def load_cookies3():
     """ 加载 cookie：cookies.txt -> load()  —— MozillaCookieJar格式
     """
     save_to_txt()
-    cj = cookielib.MozillaCookieJar()
+    cj = MozillaCookieJar()
     cj.load('localCookiesMoz.txt', ignore_discard=True, ignore_expires=True)    # 这里必须将参数置为True，否则登录失败
     for index, cookie in enumerate(cj):     # 显示cookies
-        print '[', index, ']', cookie
+        print('[', index, ']', cookie)
     return cj
 
 def load_cookies4():
     """ 加载 cookie：cookies.txt -> load()  —— LWPCookieJar格式
     """
-    cj = cookielib.LWPCookieJar()
+    cj = LWPCookieJar()
     cj.load('localCookiesLWP.txt', ignore_discard=True, ignore_expires=True)    # 这里必须将参数置为True，否则登录失败
     for index, cookie in enumerate(cj):     # 显示cookies
-        print '[', index, ']', cookie
+        print('[', index, ']', cookie)
     return cj
 
 def save_to_txt():
